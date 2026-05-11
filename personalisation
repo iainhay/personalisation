@@ -1,0 +1,646 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Persona Intelligence — University Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a18; font-size: 14px; line-height: 1.5; }
+  .shell { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { background: #fff; border-bottom: 0.5px solid #dddbd2; padding: 0 2rem; display: flex; align-items: center; gap: 1.5rem; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 13px; font-weight: 500; color: #1a1a18; }
+  .logo span { color: #1D9E75; }
+  .live-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #3B6D11; background: #EAF3DE; padding: 3px 10px; border-radius: 20px; }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #1D9E75; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 1rem; font-size: 12px; color: #888780; }
+  .topbar-right strong { color: #1a1a18; font-weight: 500; }
+  .main { display: flex; flex: 1; }
+  .sidebar { width: 200px; background: #fff; border-right: 0.5px solid #dddbd2; padding: 1.5rem 0; flex-shrink: 0; position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto; }
+  .sidebar-section { margin-bottom: 1.5rem; }
+  .sidebar-label { font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: #888780; padding: 0 1.25rem; margin-bottom: 6px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 1.25rem; font-size: 12px; color: #5F5E5A; cursor: pointer; border-left: 2px solid transparent; transition: all 0.1s; }
+  .nav-item:hover { background: #f5f4f0; color: #1a1a18; }
+  .nav-item.active { color: #1a1a18; background: #E1F5EE; border-left-color: #1D9E75; font-weight: 500; }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .nav-count { margin-left: auto; font-size: 10px; background: #f5f4f0; padding: 1px 6px; border-radius: 10px; color: #5F5E5A; }
+  .nav-item.active .nav-count { background: #9FE1CB; color: #085041; }
+  .content { flex: 1; padding: 2rem; overflow-y: auto; }
+  .page { display: none; } .page.active { display: block; }
+  .page-header { margin-bottom: 1.5rem; }
+  .page-title { font-size: 18px; font-weight: 500; margin-bottom: 2px; }
+  .page-sub { font-size: 12px; color: #888780; }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: #888780; margin-bottom: 10px; }
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: #fff; border: 0.5px solid #dddbd2; border-radius: 8px; padding: 14px 16px; }
+  .metric-label { font-size: 11px; color: #888780; margin-bottom: 4px; }
+  .metric-value { font-size: 24px; font-weight: 500; }
+  .metric-delta { font-size: 11px; margin-top: 3px; }
+  .up { color: #3B6D11; } .neutral { color: #888780; } .warn { color: #854F0B; } .down { color: #A32D2D; }
+  .card { background: #fff; border: 0.5px solid #dddbd2; border-radius: 12px; padding: 16px; }
+  .card-title { font-size: 12px; font-weight: 500; color: #1a1a18; margin-bottom: 12px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .alert { background: #FAEEDA; border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; font-size: 12px; color: #633806; border: 0.5px solid #FAC775; }
+  .pill { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 500; display: inline-block; }
+  .pill-teal { background: #E1F5EE; color: #0F6E56; }
+  .pill-blue { background: #E6F1FB; color: #185FA5; }
+  .pill-amber { background: #FAEEDA; color: #854F0B; }
+  .pill-red { background: #FCEBEB; color: #A32D2D; }
+  .pill-purple { background: #EEEDFE; color: #534AB7; }
+  .pill-gray { background: #F1EFE8; color: #5F5E5A; }
+  .pill-green { background: #EAF3DE; color: #3B6D11; }
+
+  /* Course table */
+  .course-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .course-table th { font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: #888780; padding: 6px 10px; text-align: left; border-bottom: 0.5px solid #dddbd2; }
+  .course-table td { padding: 9px 10px; border-bottom: 0.5px solid #f1efe8; vertical-align: middle; }
+  .course-table tr:last-child td { border-bottom: none; }
+  .course-table tr:hover td { background: #fafaf7; }
+  .course-table tr.clickable { cursor: pointer; }
+  .course-name { font-weight: 500; color: #1a1a18; }
+  .course-dept { font-size: 10px; color: #888780; }
+  .bar-cell { width: 120px; }
+  .mini-bar-track { height: 5px; background: #f1efe8; border-radius: 3px; overflow: hidden; }
+  .mini-bar-fill { height: 100%; border-radius: 3px; }
+  .conv-pill { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; display: inline-block; }
+  .conv-high { background: #EAF3DE; color: #3B6D11; }
+  .conv-mid { background: #FAEEDA; color: #854F0B; }
+  .conv-low { background: #FCEBEB; color: #A32D2D; }
+  .trend-up { color: #3B6D11; font-size: 11px; }
+  .trend-down { color: #A32D2D; font-size: 11px; }
+  .trend-flat { color: #888780; font-size: 11px; }
+
+  /* Funnel bars */
+  .funnel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .funnel-label { font-size: 11px; color: #888780; width: 140px; flex-shrink: 0; }
+  .funnel-track { flex: 1; height: 18px; background: #f5f4f0; border-radius: 3px; overflow: hidden; }
+  .funnel-fill { height: 100%; display: flex; align-items: center; padding-left: 7px; font-size: 10px; font-weight: 500; border-radius: 3px; }
+  .funnel-pct { font-size: 10px; color: #888780; width: 36px; text-align: right; flex-shrink: 0; }
+
+  /* Journey panel */
+  .journey-panel { background: #fff; border: 0.5px solid #dddbd2; border-radius: 12px; padding: 16px; margin-bottom: 1rem; }
+  .journey-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .journey-id { font-size: 13px; font-weight: 500; }
+  .journey-meta { font-size: 11px; color: #888780; }
+  .journey-steps { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding-bottom: 6px; }
+  .j-step { display: flex; flex-direction: column; align-items: center; min-width: 120px; position: relative; }
+  .j-step:not(:last-child)::after { content: ''; position: absolute; top: 14px; left: 60%; width: 80%; height: 2px; background: #dddbd2; z-index: 0; }
+  .j-node { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; border: 2px solid #dddbd2; background: #fff; z-index: 1; flex-shrink: 0; margin-bottom: 6px; }
+  .j-node.course { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; }
+  .j-node.info { background: #E6F1FB; border-color: #185FA5; color: #185FA5; }
+  .j-node.action { background: #FAEEDA; border-color: #BA7517; color: #854F0B; }
+  .j-node.exit { background: #FCEBEB; border-color: #D4537E; color: #A32D2D; }
+  .j-node.convert { background: #EAF3DE; border-color: #3B6D11; color: #3B6D11; }
+  .j-label { font-size: 10px; text-align: center; color: #5F5E5A; line-height: 1.3; max-width: 110px; }
+  .j-time { font-size: 9px; color: #b4b2a9; margin-top: 2px; }
+  .vdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .visitor-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid #f1efe8; cursor: pointer; }
+  .visitor-row:last-child { border-bottom: none; }
+  .visitor-row:hover { background: #fafaf7; margin: 0 -8px; padding: 8px 8px; border-radius: 6px; }
+  .vinfo { flex: 1; }
+  .vid { font-size: 11px; font-weight: 500; }
+  .vpage { font-size: 10px; color: #888780; }
+  .vtime { font-size: 10px; color: #b4b2a9; flex-shrink: 0; }
+  .vcourse { font-size: 10px; color: #0F6E56; background: #E1F5EE; padding: 1px 6px; border-radius: 10px; flex-shrink: 0; }
+  .tab-bar { display: flex; border-bottom: 0.5px solid #dddbd2; margin-bottom: 1.5rem; }
+  .tab { font-size: 12px; padding: 8px 16px; cursor: pointer; color: #888780; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: #1a1a18; }
+  .tab.active { color: #1a1a18; border-bottom-color: #1D9E75; font-weight: 500; }
+
+  /* Modal overlay */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 24px; width: 760px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-title { font-size: 14px; font-weight: 500; }
+  .modal-close { font-size: 18px; cursor: pointer; color: #888780; line-height: 1; }
+  .modal-close:hover { color: #1a1a18; }
+
+  /* Sparkline */
+  .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 28px; }
+  .sp-bar { flex: 1; border-radius: 2px 2px 0 0; }
+
+  .mb1 { margin-bottom: 1rem; }
+  .mb15 { margin-bottom: 1.5rem; }
+  .signals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .sig-cell { background: #fff; border: 0.5px solid #dddbd2; border-radius: 8px; padding: 10px 12px; }
+  .sig-label { font-size: 10px; color: #888780; margin-bottom: 2px; }
+  .sig-value { font-size: 13px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="logo">persona<span>intel</span></div>
+    <div class="live-badge"><div class="live-dot"></div> Live</div>
+    <div class="topbar-right">
+      <span>University of Eastbridge</span>
+      <span>|</span>
+      <span>Last updated <strong id="lastUpdated">just now</strong></span>
+      <span>|</span>
+      <span id="clockDisplay" style="font-weight:500;color:#1a1a18;"></span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Views</div>
+        <div class="nav-item active" onclick="showPage('overview',this)"><div class="nav-dot" style="background:#1D9E75;"></div> Overview</div>
+        <div class="nav-item" onclick="showPage('courses',this)"><div class="nav-dot" style="background:#185FA5;"></div> Course Interest</div>
+        <div class="nav-item" onclick="showPage('journeys',this)"><div class="nav-dot" style="background:#534AB7;"></div> User Journeys</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Personas</div>
+        <div class="nav-item" onclick="showPage('ug',this)"><div class="nav-dot" style="background:#1D9E75;"></div> Undergrad <span class="nav-count">84</span></div>
+        <div class="nav-item" onclick="showPage('int',this)"><div class="nav-dot" style="background:#185FA5;"></div> International <span class="nav-count">37</span></div>
+        <div class="nav-item" onclick="showPage('pg',this)"><div class="nav-dot" style="background:#534AB7;"></div> Postgrad <span class="nav-count">13</span></div>
+        <div class="nav-item" onclick="showPage('par',this)"><div class="nav-dot" style="background:#BA7517;"></div> Parent <span class="nav-count">8</span></div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===== OVERVIEW ===== -->
+      <div class="page active" id="page-overview">
+        <div class="page-header">
+          <div class="page-title">Overview</div>
+          <div class="page-sub">All personas · Real-time · Pre-CRM visitor intelligence</div>
+        </div>
+        <div class="alert">⚡ &nbsp;<span><strong>3 high-intent visitors</strong> on scholarship pages with no CRM match — likely postgraduate applicants. <span style="text-decoration:underline;cursor:pointer;" onclick="showPage('journeys',document.querySelectorAll('.nav-item')[2])">View their journeys →</span></span></div>
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Active visitors</div><div class="metric-value" id="totalActive">247</div><div class="metric-delta up">+18 in last 5 min</div></div>
+          <div class="metric"><div class="metric-label">Unmatched to CRM</div><div class="metric-value">189</div><div class="metric-delta neutral">76% of active</div></div>
+          <div class="metric"><div class="metric-label">Courses being viewed</div><div class="metric-value">31</div><div class="metric-delta up">across 8 faculties</div></div>
+          <div class="metric"><div class="metric-label">Avg session depth</div><div class="metric-value">4.2</div><div class="metric-delta neutral">pages per visit</div></div>
+        </div>
+
+        <div class="section-label">Top courses being searched right now</div>
+        <div class="card mb15">
+          <table class="course-table">
+            <thead><tr>
+              <th>Course</th><th>Active viewers</th><th>Interest (vs avg)</th><th>Conv. rate</th><th>Trend</th><th>Top persona</th>
+            </tr></thead>
+            <tbody>
+              <tr class="clickable" onclick="openCourseModal('cs')"><td><div class="course-name">Computer Science BSc</div><div class="course-dept">Science & Engineering</div></td><td><strong>22</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:88%;background:#1D9E75;"></div></div></td><td><span class="conv-pill conv-high">14.2%</span></td><td class="trend-up">↑ +4.1%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('psy')"><td><div class="course-name">Psychology BSc</div><div class="course-dept">Social Sciences</div></td><td><strong>14</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:58%;background:#5DCAA5;"></div></div></td><td><span class="conv-pill conv-mid">8.7%</span></td><td class="trend-up">↑ +1.2%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('eng')"><td><div class="course-name">Engineering MEng</div><div class="course-dept">Science & Engineering</div></td><td><strong>11</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:44%;background:#85B7EB;"></div></div></td><td><span class="conv-pill conv-mid">9.1%</span></td><td class="trend-flat">→ flat</td><td><span class="pill pill-blue">International</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('med')"><td><div class="course-name">Medicine MBBS</div><div class="course-dept">Health Sciences</div></td><td><strong>9</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:36%;background:#5DCAA5;"></div></div></td><td><span class="conv-pill conv-high">18.5%</span></td><td class="trend-up">↑ +2.0%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('ds')"><td><div class="course-name">Data Science MSc</div><div class="course-dept">Science & Engineering</div></td><td><strong>8</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:32%;background:#AFA9EC;"></div></div></td><td><span class="conv-pill conv-mid">7.3%</span></td><td class="trend-up">↑ +3.5%</td><td><span class="pill pill-purple">Postgrad</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('law')"><td><div class="course-name">Law LLB</div><div class="course-dept">Humanities</div></td><td><strong>7</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:28%;background:#9FE1CB;"></div></div></td><td><span class="conv-pill conv-low">4.1%</span></td><td class="trend-down">↓ -1.8%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('bus')"><td><div class="course-name">Business & Mgmt BSc</div><div class="course-dept">Business School</div></td><td><strong>6</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:24%;background:#EF9F27;"></div></div></td><td><span class="conv-pill conv-mid">6.8%</span></td><td class="trend-flat">→ flat</td><td><span class="pill pill-blue">International</span></td></tr>
+              <tr class="clickable" onclick="openCourseModal('ai')"><td><div class="course-name">AI & Robotics MSc</div><div class="course-dept">Science & Engineering</div></td><td><strong>5</strong></td><td class="bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:20%;background:#7F77DD;"></div></div></td><td><span class="conv-pill conv-low">5.2%</span></td><td class="trend-up">↑ +6.1%</td><td><span class="pill pill-purple">Postgrad</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-label">Traffic signals</div>
+        <div class="signals-grid">
+          <div class="sig-cell"><div class="sig-label">Top source</div><div class="sig-value">Google / organic</div></div>
+          <div class="sig-cell"><div class="sig-label">Top device</div><div class="sig-value">Mobile (61%)</div></div>
+          <div class="sig-cell"><div class="sig-label">Top country</div><div class="sig-value">United Kingdom</div></div>
+          <div class="sig-cell"><div class="sig-label">Avg time on site</div><div class="sig-value">5m 42s</div></div>
+          <div class="sig-cell"><div class="sig-label">Bounce rate (unmatched)</div><div class="sig-value">38%</div></div>
+          <div class="sig-cell"><div class="sig-label">Returning visitors</div><div class="sig-value">29%</div></div>
+        </div>
+      </div>
+
+      <!-- ===== COURSE INTEREST ===== -->
+      <div class="page" id="page-courses">
+        <div class="page-header">
+          <div class="page-title">Course Interest</div>
+          <div class="page-sub">Which courses are being viewed, by whom, and how well those pages convert</div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Courses being viewed</div><div class="metric-value">31</div><div class="metric-delta up">across 8 faculties</div></div>
+          <div class="metric"><div class="metric-label">Avg landing page conv.</div><div class="metric-value">8.4%</div><div class="metric-delta up">+1.2% vs last week</div></div>
+          <div class="metric"><div class="metric-label">Drop-off (1 page only)</div><div class="metric-value">22%</div><div class="metric-delta neutral">Steady</div></div>
+          <div class="metric"><div class="metric-label">High-intent course views</div><div class="metric-value">47</div><div class="metric-delta up">3+ pages deep</div></div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab active" onclick="switchSubTab(this,'ct-all')">All courses</div>
+          <div class="tab" onclick="switchSubTab(this,'ct-ug')">Undergraduate</div>
+          <div class="tab" onclick="switchSubTab(this,'ct-pg')">Postgraduate</div>
+          <div class="tab" onclick="switchSubTab(this,'ct-intl')">International interest</div>
+        </div>
+
+        <div id="ct-all" class="subtab active-subtab">
+          <div class="card mb1">
+            <div class="card-title">Course landing page performance — live session data</div>
+            <table class="course-table">
+              <thead><tr>
+                <th>Course</th><th>Viewing now</th><th>Viewed today</th><th>Avg time on page</th><th>Scrolled to modules</th><th>Conv. rate</th><th>Trend</th><th>Primary persona</th>
+              </tr></thead>
+              <tbody>
+                <tr class="clickable" onclick="openCourseModal('cs')"><td><div class="course-name">Computer Science BSc</div><div class="course-dept">Science & Engineering</div></td><td><strong>22</strong></td><td>148</td><td>4m 12s</td><td>74%</td><td><span class="conv-pill conv-high">14.2%</span></td><td class="trend-up">↑ +4.1%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('med')"><td><div class="course-name">Medicine MBBS</div><div class="course-dept">Health Sciences</div></td><td><strong>9</strong></td><td>92</td><td>6m 44s</td><td>88%</td><td><span class="conv-pill conv-high">18.5%</span></td><td class="trend-up">↑ +2.0%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('psy')"><td><div class="course-name">Psychology BSc</div><div class="course-dept">Social Sciences</div></td><td><strong>14</strong></td><td>87</td><td>3m 30s</td><td>61%</td><td><span class="conv-pill conv-mid">8.7%</span></td><td class="trend-up">↑ +1.2%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('eng')"><td><div class="course-name">Engineering MEng</div><div class="course-dept">Science & Engineering</div></td><td><strong>11</strong></td><td>74</td><td>4m 55s</td><td>69%</td><td><span class="conv-pill conv-mid">9.1%</span></td><td class="trend-flat">→ flat</td><td><span class="pill pill-blue">International</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('ds')"><td><div class="course-name">Data Science MSc</div><div class="course-dept">Science & Engineering</div></td><td><strong>8</strong></td><td>61</td><td>5m 10s</td><td>77%</td><td><span class="conv-pill conv-mid">7.3%</span></td><td class="trend-up">↑ +3.5%</td><td><span class="pill pill-purple">Postgrad</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('bus')"><td><div class="course-name">Business & Mgmt BSc</div><div class="course-dept">Business School</div></td><td><strong>6</strong></td><td>54</td><td>2m 50s</td><td>45%</td><td><span class="conv-pill conv-mid">6.8%</span></td><td class="trend-flat">→ flat</td><td><span class="pill pill-blue">International</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('law')"><td><div class="course-name">Law LLB</div><div class="course-dept">Humanities</div></td><td><strong>7</strong></td><td>49</td><td>2m 10s</td><td>38%</td><td><span class="conv-pill conv-low">4.1%</span></td><td class="trend-down">↓ -1.8%</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('ai')"><td><div class="course-name">AI & Robotics MSc</div><div class="course-dept">Science & Engineering</div></td><td><strong>5</strong></td><td>38</td><td>6m 02s</td><td>82%</td><td><span class="conv-pill conv-low">5.2%</span></td><td class="trend-up">↑ +6.1%</td><td><span class="pill pill-purple">Postgrad</span></td></tr>
+                <tr class="clickable" onclick="openCourseModal('arch')"><td><div class="course-name">Architecture BA</div><div class="course-dept">Arts & Design</div></td><td><strong>4</strong></td><td>31</td><td>3m 45s</td><td>52%</td><td><span class="conv-pill conv-low">5.8%</span></td><td class="trend-flat">→ flat</td><td><span class="pill pill-teal">Undergrad</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="alert" style="background:#FCEBEB;border-color:#F5A5A5;color:#7A1E1E;">
+            ⚠️ &nbsp;<strong>Law LLB conversion rate is falling</strong> — visitors are spending under 2 minutes on the page and only 38% scroll to modules. Consider reviewing the page content or layout.
+          </div>
+        </div>
+
+        <div id="ct-ug" class="subtab" style="display:none;">
+          <div class="card mb1">
+            <div class="card-title">Undergraduate courses — active interest</div>
+            <table class="course-table">
+              <thead><tr><th>Course</th><th>Viewing now</th><th>Conv. rate</th><th>Scroll to modules</th><th>Next action taken</th></tr></thead>
+              <tbody>
+                <tr class="clickable" onclick="openCourseModal('cs')"><td><div class="course-name">Computer Science BSc</div></td><td><strong>22</strong></td><td><span class="conv-pill conv-high">14.2%</span></td><td>74%</td><td>Open day signup</td></tr>
+                <tr class="clickable" onclick="openCourseModal('med')"><td><div class="course-name">Medicine MBBS</div></td><td><strong>9</strong></td><td><span class="conv-pill conv-high">18.5%</span></td><td>88%</td><td>Entry req. check</td></tr>
+                <tr class="clickable" onclick="openCourseModal('psy')"><td><div class="course-name">Psychology BSc</div></td><td><strong>14</strong></td><td><span class="conv-pill conv-mid">8.7%</span></td><td>61%</td><td>Student life page</td></tr>
+                <tr class="clickable" onclick="openCourseModal('law')"><td><div class="course-name">Law LLB</div></td><td><strong>7</strong></td><td><span class="conv-pill conv-low">4.1%</span></td><td>38%</td><td>Exit (no action)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="ct-pg" class="subtab" style="display:none;">
+          <div class="card mb1">
+            <div class="card-title">Postgraduate courses — active interest</div>
+            <table class="course-table">
+              <thead><tr><th>Course</th><th>Viewing now</th><th>Conv. rate</th><th>Scroll to modules</th><th>Next action taken</th></tr></thead>
+              <tbody>
+                <tr class="clickable" onclick="openCourseModal('ds')"><td><div class="course-name">Data Science MSc</div></td><td><strong>8</strong></td><td><span class="conv-pill conv-mid">7.3%</span></td><td>77%</td><td>Funding page</td></tr>
+                <tr class="clickable" onclick="openCourseModal('ai')"><td><div class="course-name">AI & Robotics MSc</div></td><td><strong>5</strong></td><td><span class="conv-pill conv-low">5.2%</span></td><td>82%</td><td>Faculty profile</td></tr>
+                <tr class="clickable" onclick="openCourseModal('eng')"><td><div class="course-name">Engineering MEng</div></td><td><strong>11</strong></td><td><span class="conv-pill conv-mid">9.1%</span></td><td>69%</td><td>Scholarship check</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="ct-intl" class="subtab" style="display:none;">
+          <div class="card mb1">
+            <div class="card-title">International visitor course interest</div>
+            <table class="course-table">
+              <thead><tr><th>Course</th><th>Intl. viewers</th><th>Top country</th><th>Conv. rate</th><th>Scholarship page visited</th></tr></thead>
+              <tbody>
+                <tr class="clickable" onclick="openCourseModal('eng')"><td><div class="course-name">Engineering MEng</div></td><td><strong>8</strong></td><td>India</td><td><span class="conv-pill conv-mid">9.1%</span></td><td>Yes — 71%</td></tr>
+                <tr class="clickable" onclick="openCourseModal('bus')"><td><div class="course-name">Business & Mgmt BSc</div></td><td><strong>5</strong></td><td>Nigeria</td><td><span class="conv-pill conv-mid">6.8%</span></td><td>Yes — 60%</td></tr>
+                <tr class="clickable" onclick="openCourseModal('cs')"><td><div class="course-name">Computer Science BSc</div></td><td><strong>4</strong></td><td>China</td><td><span class="conv-pill conv-high">14.2%</span></td><td>Yes — 50%</td></tr>
+                <tr class="clickable" onclick="openCourseModal('ds')"><td><div class="course-name">Data Science MSc</div></td><td><strong>4</strong></td><td>India</td><td><span class="conv-pill conv-mid">7.3%</span></td><td>Yes — 75%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== USER JOURNEYS ===== -->
+      <div class="page" id="page-journeys">
+        <div class="page-header">
+          <div class="page-title">User Journeys</div>
+          <div class="page-sub">Individual visitor paths — course interest, pages visited, and drop-off points</div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Active sessions</div><div class="metric-value">247</div><div class="metric-delta neutral">with trackable path</div></div>
+          <div class="metric"><div class="metric-label">Multi-course interest</div><div class="metric-value">38</div><div class="metric-delta up">browsing 2+ courses</div></div>
+          <div class="metric"><div class="metric-label">Reached an action page</div><div class="metric-value">61</div><div class="metric-delta up">open day / enquiry</div></div>
+          <div class="metric"><div class="metric-label">Converted this session</div><div class="metric-value">12</div><div class="metric-delta up">4.9% rate</div></div>
+        </div>
+
+        <div class="two-col mb1">
+          <div class="card">
+            <div class="card-title">Active visitors — click to explore journey</div>
+            <div class="visitor-row" onclick="showJourney('j1')"><div class="vdot" style="background:#1D9E75;"></div><div class="vinfo"><div class="vid">Visitor #A1042 &nbsp;<span class="pill pill-teal" style="font-size:9px;">Undergrad</span></div><div class="vpage">Currently: CS BSc — modules tab · 4 pages in</div></div><span class="vcourse">CS BSc</span><span class="vtime" style="margin-left:4px;">2m</span></div>
+            <div class="visitor-row" onclick="showJourney('j2')"><div class="vdot" style="background:#1D9E75;"></div><div class="vinfo"><div class="vid">Visitor #B0231 &nbsp;<span class="pill pill-blue" style="font-size:9px;">International</span></div><div class="vpage">Currently: Scholarship finder · 6 pages in</div></div><span class="vcourse">Eng MEng</span><span class="vtime" style="margin-left:4px;">3m</span></div>
+            <div class="visitor-row" onclick="showJourney('j3')"><div class="vdot" style="background:#1D9E75;"></div><div class="vinfo"><div class="vid">Visitor #C0091 &nbsp;<span class="pill pill-purple" style="font-size:9px;">Postgrad</span></div><div class="vpage">Currently: Prof. J. Harlow profile · 8 pages in</div></div><span class="vcourse">AI MSc</span><span class="vtime" style="margin-left:4px;">1m</span></div>
+            <div class="visitor-row" onclick="showJourney('j4')"><div class="vdot" style="background:#1D9E75;"></div><div class="vinfo"><div class="vid">Visitor #A1038 &nbsp;<span class="pill pill-teal" style="font-size:9px;">Undergrad</span></div><div class="vpage">Currently: Fees & Scholarships · 5 pages in</div></div><span class="vcourse">Med MBBS</span><span class="vtime" style="margin-left:4px;">4m</span></div>
+            <div class="visitor-row" onclick="showJourney('j5')"><div class="vdot" style="background:#D4537E;"></div><div class="vinfo"><div class="vid">Visitor #A1027 &nbsp;<span class="pill pill-teal" style="font-size:9px;">Undergrad</span></div><div class="vpage">Idle 4 min · Entry requirements · 3 pages in</div></div><span class="vcourse">Psy BSc</span><span class="vtime" style="margin-left:4px;">10m</span></div>
+            <div class="visitor-row" onclick="showJourney('j6')"><div class="vdot" style="background:#D4537E;"></div><div class="vinfo"><div class="vid">Visitor #B0217 &nbsp;<span class="pill pill-blue" style="font-size:9px;">International</span></div><div class="vpage">Idle 6 min · Tuition fees intl. · 4 pages in</div></div><span class="vcourse">DS MSc</span><span class="vtime" style="margin-left:4px;">13m</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Most common journey patterns today</div>
+            <div style="font-size:11px;color:#5F5E5A;margin-bottom:10px;">Based on 247 active sessions</div>
+            <div style="margin-bottom:12px;padding:10px;background:#f5f4f0;border-radius:8px;">
+              <div style="font-size:11px;font-weight:500;margin-bottom:4px;">Pattern A &nbsp;<span class="pill pill-teal">Undergrad</span> &nbsp;<span style="color:#888780;font-weight:400;">· 48 visitors</span></div>
+              <div style="font-size:10px;color:#5F5E5A;">Homepage → Course page → Entry req. → Fees → <strong style="color:#1D9E75;">Open day signup ✓</strong></div>
+            </div>
+            <div style="margin-bottom:12px;padding:10px;background:#f5f4f0;border-radius:8px;">
+              <div style="font-size:11px;font-weight:500;margin-bottom:4px;">Pattern B &nbsp;<span class="pill pill-blue">International</span> &nbsp;<span style="color:#888780;font-weight:400;">· 21 visitors</span></div>
+              <div style="font-size:10px;color:#5F5E5A;">Intl. hub → Course page → Scholarships → Visa guide → <strong style="color:#1D9E75;">Enquiry ✓</strong></div>
+            </div>
+            <div style="margin-bottom:12px;padding:10px;background:#f5f4f0;border-radius:8px;">
+              <div style="font-size:11px;font-weight:500;margin-bottom:4px;">Pattern C &nbsp;<span class="pill pill-purple">Postgrad</span> &nbsp;<span style="color:#888780;font-weight:400;">· 11 visitors</span></div>
+              <div style="font-size:10px;color:#5F5E5A;">Research portal → Dept page → Faculty profile → Funding → <strong style="color:#888780;">Exit (no action)</strong></div>
+            </div>
+            <div style="padding:10px;background:#FCEBEB;border-radius:8px;">
+              <div style="font-size:11px;font-weight:500;margin-bottom:4px;">Pattern D &nbsp;<span class="pill pill-teal">Undergrad</span> &nbsp;<span style="color:#888780;font-weight:400;">· 19 visitors</span> &nbsp;<span class="pill pill-red">Drop-off risk</span></div>
+              <div style="font-size:10px;color:#5F5E5A;">Homepage → Course page → <strong style="color:#A32D2D;">Exit after 1 page</strong> — low scroll depth on Law / Business pages</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Journey detail panels -->
+        <div id="journey-detail" style="display:none;">
+          <div class="section-label" id="journey-detail-label">Visitor journey</div>
+
+          <div class="journey-panel" id="j1-panel" style="display:none;">
+            <div class="journey-header">
+              <div><div class="journey-id">Visitor #A1042 &nbsp;<span class="pill pill-teal">Undergrad</span></div><div class="journey-meta">Session started 22 min ago · Mobile · UK · Google organic · 4 pages visited · <strong style="color:#0F6E56;">High intent</strong></div></div>
+              <div style="margin-left:auto;"><span class="pill pill-teal">CS BSc</span></div>
+            </div>
+            <div class="journey-steps">
+              <div class="j-step"><div class="j-node info">🏠</div><div class="j-label">Homepage</div><div class="j-time">0:00</div></div>
+              <div class="j-step"><div class="j-node course">CS</div><div class="j-label">Computer Science BSc</div><div class="j-time">1:12 · 3m 40s</div></div>
+              <div class="j-step"><div class="j-node info">📋</div><div class="j-label">Entry requirements</div><div class="j-time">4:52 · 1m 20s</div></div>
+              <div class="j-step"><div class="j-node action">🎓</div><div class="j-label">CS BSc — Modules tab</div><div class="j-time">6:14 · active now</div></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;font-size:11px;">
+              <span>💡 Visited modules tab — strong purchase signal.</span>
+              <span class="pill pill-amber">No CRM record</span>
+              <span class="pill pill-teal">Suggested action: trigger open day chat prompt</span>
+            </div>
+          </div>
+
+          <div class="journey-panel" id="j2-panel" style="display:none;">
+            <div class="journey-header">
+              <div><div class="journey-id">Visitor #B0231 &nbsp;<span class="pill pill-blue">International</span></div><div class="journey-meta">Session started 41 min ago · Desktop · India · Education agent referral · 6 pages visited · <strong style="color:#0F6E56;">High intent</strong></div></div>
+              <div style="margin-left:auto;"><span class="pill pill-blue">Eng MEng</span></div>
+            </div>
+            <div class="journey-steps">
+              <div class="j-step"><div class="j-node info">🌍</div><div class="j-label">Intl. hub</div><div class="j-time">0:00</div></div>
+              <div class="j-step"><div class="j-node course">ENG</div><div class="j-label">Engineering MEng</div><div class="j-time">2:10 · 4m</div></div>
+              <div class="j-step"><div class="j-node info">📘</div><div class="j-label">IELTS requirements</div><div class="j-time">6:10 · 1m 30s</div></div>
+              <div class="j-step"><div class="j-node action">💰</div><div class="j-label">Scholarship finder</div><div class="j-time">7:40 · active now</div></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;font-size:11px;flex-wrap:wrap;">
+              <span>💡 Checked IELTS and is now on scholarships — likely serious applicant.</span>
+              <span class="pill pill-amber">No CRM record</span>
+              <span class="pill pill-blue">Suggested: show India-specific scholarship banner</span>
+            </div>
+          </div>
+
+          <div class="journey-panel" id="j3-panel" style="display:none;">
+            <div class="journey-header">
+              <div><div class="journey-id">Visitor #C0091 &nbsp;<span class="pill pill-purple">Postgrad</span></div><div class="journey-meta">Session started 1h 2min ago · Desktop · UK · Google Scholar · 8 pages visited · <strong style="color:#0F6E56;">Very high intent</strong></div></div>
+              <div style="margin-left:auto;"><span class="pill pill-purple">AI MSc</span></div>
+            </div>
+            <div class="journey-steps">
+              <div class="j-step"><div class="j-node info">🔬</div><div class="j-label">Research portal</div><div class="j-time">0:00</div></div>
+              <div class="j-step"><div class="j-node course">AI</div><div class="j-label">AI & Robotics MSc</div><div class="j-time">3:20 · 6m</div></div>
+              <div class="j-step"><div class="j-node info">🏛️</div><div class="j-label">CS Dept. overview</div><div class="j-time">9:20 · 2m</div></div>
+              <div class="j-step"><div class="j-node action">👤</div><div class="j-label">Prof. J. Harlow profile</div><div class="j-time">11:20 · 8m</div></div>
+              <div class="j-step"><div class="j-node action">💷</div><div class="j-label">EPSRC Funding</div><div class="j-time">19:20 · 3m</div></div>
+              <div class="j-step"><div class="j-node course">AI</div><div class="j-label">AI MSc — programme spec</div><div class="j-time">22:20 · active now</div></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;font-size:11px;flex-wrap:wrap;">
+              <span>💡 8 pages deep, reading a specific faculty profile and programme spec — very likely to enquire.</span>
+              <span class="pill pill-amber">No CRM record</span>
+              <span class="pill pill-purple">Suggested: surface Prof. Harlow contact link</span>
+            </div>
+          </div>
+
+          <div class="journey-panel" id="j4-panel" style="display:none;">
+            <div class="journey-header">
+              <div><div class="journey-id">Visitor #A1038 &nbsp;<span class="pill pill-teal">Undergrad</span></div><div class="journey-meta">Session started 18 min ago · Mobile · UK · Direct · 5 pages visited · <strong style="color:#854F0B;">Medium intent</strong></div></div>
+              <div style="margin-left:auto;"><span class="pill pill-teal">Med MBBS</span></div>
+            </div>
+            <div class="journey-steps">
+              <div class="j-step"><div class="j-node info">🏠</div><div class="j-label">Homepage</div><div class="j-time">0:00</div></div>
+              <div class="j-step"><div class="j-node course">MED</div><div class="j-label">Medicine MBBS</div><div class="j-time">1:05 · 5m</div></div>
+              <div class="j-step"><div class="j-node info">📋</div><div class="j-label">Entry requirements</div><div class="j-time">6:05 · 2m</div></div>
+              <div class="j-step"><div class="j-node action">💰</div><div class="j-label">Fees & Scholarships</div><div class="j-time">8:05 · active now</div></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;font-size:11px;flex-wrap:wrap;">
+              <span>💡 Checking fees after entry requirements — financially motivated. No open day action yet.</span>
+              <span class="pill pill-amber">No CRM record</span>
+              <span class="pill pill-teal">Suggested: show next open day date prominently</span>
+            </div>
+          </div>
+
+          <div class="journey-panel" id="j5-panel" style="display:none;">
+            <div class="journey-header">
+              <div><div class="journey-id">Visitor #A1027 &nbsp;<span class="pill pill-teal">Undergrad</span></div><div class="journey-meta">Session started 28 min ago · Mobile · UK · Google organic · 3 pages · <strong style="color:#A32D2D;">Idle — drop-off risk</strong></div></div>
+              <div style="margin-left:auto;"><span class="pill pill-teal">Psy BSc</span></div>
+            </div>
+            <div class="journey-steps">
+              <div class="j-step"><div class="j-node info">🏠</div><div class="j-label">Homepage</div><div class="j-time">0:00</div></div>
+              <div class="j-step"><div class="j-node course">PSY</div><div class="j-label">Psychology BSc</div><div class="j-time">0:45 · 2m</div></div>
+              <div class="j-step"><div class="j-node exit">⏸</div><div class="j-label">Entry requirements — idle 4 min</div><div class="j-time">2:45 · stalled</div></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;font-size:11px;flex-wrap:wrap;">
+              <span>⚠️ Stalled on entry requirements page — may be confused or disqualified by grades. At risk of exit.</span>
+              <span class="pill pill-red">Drop-off risk</span>
+              <span class="pill pill-amber">Suggested: trigger "chat with admissions" prompt</span>
+            </div>
+          </div>
+
+          <div class="journey-panel" id="j6-panel" style="display:none;">
+            <div class="journey-header">
+              <div><div class="journey-id">Visitor #B0217 &nbsp;<span class="pill pill-blue">International</span></div><div class="journey-meta">Session started 35 min ago · Desktop · Pakistan · Direct · 4 pages · <strong style="color:#A32D2D;">Idle — drop-off risk</strong></div></div>
+              <div style="margin-left:auto;"><span class="pill pill-blue">DS MSc</span></div>
+            </div>
+            <div class="journey-steps">
+              <div class="j-step"><div class="j-node info">🌍</div><div class="j-label">Intl. hub</div><div class="j-time">0:00</div></div>
+              <div class="j-step"><div class="j-node course">DS</div><div class="j-label">Data Science MSc</div><div class="j-time">2:00 · 5m</div></div>
+              <div class="j-step"><div class="j-node info">📘</div><div class="j-label">English requirements</div><div class="j-time">7:00 · 3m</div></div>
+              <div class="j-step"><div class="j-node exit">⏸</div><div class="j-label">Intl. tuition fees — idle 6 min</div><div class="j-time">10:00 · stalled</div></div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;font-size:11px;flex-wrap:wrap;">
+              <span>⚠️ Stalled on fees page — likely price-sensitive. No scholarship page visited yet.</span>
+              <span class="pill pill-red">Drop-off risk</span>
+              <span class="pill pill-blue">Suggested: surface Pakistan scholarship options</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== PERSONA PAGES (abbreviated) ===== -->
+      <div class="page" id="page-ug">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><div style="width:30px;height:30px;border-radius:50%;background:#E1F5EE;color:#0F6E56;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;">UG</div><div class="page-title">Prospective undergrad</div><span class="pill pill-amber" style="font-size:11px;padding:3px 10px;">High intent</span></div>
+          <div class="page-sub">Ages 16–18 · 84 active now · Goal: find the right course and apply</div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Active</div><div class="metric-value">84</div><div class="metric-delta up">+6 this hour</div></div>
+          <div class="metric"><div class="metric-label">Courses being viewed</div><div class="metric-value">11</div><div class="metric-delta neutral">distinct courses</div></div>
+          <div class="metric"><div class="metric-label">Top course</div><div class="metric-value" style="font-size:16px;">CS BSc</div><div class="metric-delta up">22 viewers</div></div>
+          <div class="metric"><div class="metric-label">Open day signups today</div><div class="metric-value">9</div><div class="metric-delta up">+3 vs yesterday</div></div>
+        </div>
+        <div class="card mb1">
+          <div class="card-title">Courses this persona is viewing right now</div>
+          <table class="course-table">
+            <thead><tr><th>Course</th><th>Viewing now</th><th>Conv. rate</th><th>Most common next step</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr class="clickable" onclick="openCourseModal('cs')"><td><div class="course-name">Computer Science BSc</div></td><td><strong>22</strong></td><td><span class="conv-pill conv-high">14.2%</span></td><td>Open day signup</td><td class="trend-up">↑ +4.1%</td></tr>
+              <tr class="clickable" onclick="openCourseModal('psy')"><td><div class="course-name">Psychology BSc</div></td><td><strong>14</strong></td><td><span class="conv-pill conv-mid">8.7%</span></td><td>Student life page</td><td class="trend-up">↑ +1.2%</td></tr>
+              <tr class="clickable" onclick="openCourseModal('med')"><td><div class="course-name">Medicine MBBS</div></td><td><strong>9</strong></td><td><span class="conv-pill conv-high">18.5%</span></td><td>Entry req. check</td><td class="trend-up">↑ +2.0%</td></tr>
+              <tr class="clickable" onclick="openCourseModal('law')"><td><div class="course-name">Law LLB</div></td><td><strong>7</strong></td><td><span class="conv-pill conv-low">4.1%</span></td><td>Exit (no action)</td><td class="trend-down">↓ -1.8%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card"><div class="card-title">Identification signals</div><div style="display:flex;flex-wrap:wrap;gap:8px;"><span class="pill pill-teal">3+ course pages</span><span class="pill pill-teal">Visited entry requirements</span><span class="pill pill-teal">UK domestic IP</span><span class="pill pill-amber">Mobile, 4–7pm peak</span><span class="pill pill-gray">No CRM match</span></div></div>
+      </div>
+
+      <div class="page" id="page-int">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><div style="width:30px;height:30px;border-radius:50%;background:#E6F1FB;color:#185FA5;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;">IS</div><div class="page-title">International student</div><span class="pill pill-amber" style="font-size:11px;padding:3px 10px;">Medium intent</span></div>
+          <div class="page-sub">Ages 18–25 · 37 active now · Goal: study abroad, understand visa & support</div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Active</div><div class="metric-value">37</div><div class="metric-delta up">+2 this hour</div></div>
+          <div class="metric"><div class="metric-label">Top course</div><div class="metric-value" style="font-size:16px;">Eng MEng</div><div class="metric-delta neutral">8 viewers</div></div>
+          <div class="metric"><div class="metric-label">Scholarship page visits</div><div class="metric-value">20</div><div class="metric-delta up">54% of persona</div></div>
+          <div class="metric"><div class="metric-label">Enquiries today</div><div class="metric-value">4</div><div class="metric-delta neutral">Steady</div></div>
+        </div>
+        <div class="card mb1">
+          <div class="card-title">Courses this persona is viewing right now</div>
+          <table class="course-table">
+            <thead><tr><th>Course</th><th>Viewing now</th><th>Conv. rate</th><th>Scholarship page visited</th><th>Top country</th></tr></thead>
+            <tbody>
+              <tr class="clickable" onclick="openCourseModal('eng')"><td><div class="course-name">Engineering MEng</div></td><td><strong>8</strong></td><td><span class="conv-pill conv-mid">9.1%</span></td><td>Yes — 71%</td><td>India</td></tr>
+              <tr class="clickable" onclick="openCourseModal('bus')"><td><div class="course-name">Business & Mgmt BSc</div></td><td><strong>5</strong></td><td><span class="conv-pill conv-mid">6.8%</span></td><td>Yes — 60%</td><td>Nigeria</td></tr>
+              <tr class="clickable" onclick="openCourseModal('cs')"><td><div class="course-name">Computer Science BSc</div></td><td><strong>4</strong></td><td><span class="conv-pill conv-high">14.2%</span></td><td>Yes — 50%</td><td>China</td></tr>
+              <tr class="clickable" onclick="openCourseModal('ds')"><td><div class="course-name">Data Science MSc</div></td><td><strong>4</strong></td><td><span class="conv-pill conv-mid">7.3%</span></td><td>Yes — 75%</td><td>India</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card"><div class="card-title">Identification signals</div><div style="display:flex;flex-wrap:wrap;gap:8px;"><span class="pill pill-blue">Non-UK IP</span><span class="pill pill-blue">International hub entry</span><span class="pill pill-blue">IELTS/TOEFL pages viewed</span><span class="pill pill-amber">Scholarship pages visited</span><span class="pill pill-gray">No CRM match</span></div></div>
+      </div>
+
+      <div class="page" id="page-pg">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><div style="width:30px;height:30px;border-radius:50%;background:#EEEDFE;color:#534AB7;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;">PG</div><div class="page-title">Postgrad / researcher</div><span class="pill pill-red" style="font-size:11px;padding:3px 10px;">High intent</span></div>
+          <div class="page-sub">Ages 22–35 · 13 active now · Goal: find a programme or supervisor</div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Active</div><div class="metric-value">13</div><div class="metric-delta neutral">Stable</div></div>
+          <div class="metric"><div class="metric-label">Top course</div><div class="metric-value" style="font-size:16px;">DS MSc</div><div class="metric-delta neutral">8 viewers</div></div>
+          <div class="metric"><div class="metric-label">Faculty profiles visited</div><div class="metric-value">8</div><div class="metric-delta up">62% of persona</div></div>
+          <div class="metric"><div class="metric-label">Avg session depth</div><div class="metric-value">8.7</div><div class="metric-delta up">Very high</div></div>
+        </div>
+        <div class="card mb1">
+          <div class="card-title">Courses this persona is viewing right now</div>
+          <table class="course-table">
+            <thead><tr><th>Course</th><th>Viewing now</th><th>Conv. rate</th><th>Faculty profile visited</th><th>Funding page visited</th></tr></thead>
+            <tbody>
+              <tr class="clickable" onclick="openCourseModal('ds')"><td><div class="course-name">Data Science MSc</div></td><td><strong>8</strong></td><td><span class="conv-pill conv-mid">7.3%</span></td><td>Yes — 63%</td><td>Yes — 50%</td></tr>
+              <tr class="clickable" onclick="openCourseModal('ai')"><td><div class="course-name">AI & Robotics MSc</div></td><td><strong>5</strong></td><td><span class="conv-pill conv-low">5.2%</span></td><td>Yes — 80%</td><td>Yes — 60%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card"><div class="card-title">Identification signals</div><div style="display:flex;flex-wrap:wrap;gap:8px;"><span class="pill pill-purple">Google Scholar referral</span><span class="pill pill-purple">Faculty profile visited</span><span class="pill pill-red">Funding pages viewed</span><span class="pill pill-gray">Desktop device</span><span class="pill pill-gray">No CRM match</span></div></div>
+      </div>
+
+      <div class="page" id="page-par">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><div style="width:30px;height:30px;border-radius:50%;background:#FAEEDA;color:#854F0B;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;">PA</div><div class="page-title">Parent / guardian</div><span class="pill pill-gray" style="font-size:11px;padding:3px 10px;">Low intent</span></div>
+          <div class="page-sub">Ages 40–55 · 8 active now · Goal: validate child's choice, check safety & accommodation</div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-label">Active</div><div class="metric-value">8</div><div class="metric-delta neutral">Stable</div></div>
+          <div class="metric"><div class="metric-label">Top pages</div><div class="metric-value" style="font-size:14px;">Accommodation</div><div class="metric-delta neutral">& Rankings</div></div>
+          <div class="metric"><div class="metric-label">Avg session depth</div><div class="metric-value">3.4</div><div class="metric-delta neutral">Below avg</div></div>
+          <div class="metric"><div class="metric-label">Open day signups</div><div class="metric-value">1</div><div class="metric-delta neutral">Today</div></div>
+        </div>
+        <div class="card"><div class="card-title">Identification signals</div><div style="display:flex;flex-wrap:wrap;gap:8px;"><span class="pill pill-amber">Accommodation pages</span><span class="pill pill-amber">Safety / rankings viewed</span><span class="pill pill-amber">Desktop, daytime</span><span class="pill pill-gray">Share-link referral</span><span class="pill pill-gray">No CRM match</span></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Course modal -->
+<div class="modal-bg" id="courseModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Course detail</div>
+      <div class="modal-close" onclick="document.getElementById('courseModal').classList.remove('open')">✕</div>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+  const courses = {
+    cs: { name:'Computer Science BSc', dept:'Science & Engineering', active:22, today:148, time:'4m 12s', scroll:'74%', conv:'14.2%', convClass:'conv-high', trend:'↑ +4.1%', trendClass:'trend-up', personas:['Undergrad (17)','International (4)','Parent (1)'], funnel:[[100,'#9FE1CB','148','Landed on page'],[82,'#5DCAA5','121','Scrolled past hero'],[74,'#5DCAA5','110','Scrolled to modules'],[28,'#1D9E75','41','Clicked entry req.'],[14,'#0F6E56','21','Booked open day / enquired']], note:'High conversion — modules section is the key engagement point. Consider adding a "Book open day" CTA directly below the modules tab.' },
+    psy: { name:'Psychology BSc', dept:'Social Sciences', active:14, today:87, time:'3m 30s', scroll:'61%', conv:'8.7%', convClass:'conv-mid', trend:'↑ +1.2%', trendClass:'trend-up', personas:['Undergrad (12)','Parent (2)'], funnel:[[100,'#9FE1CB','87','Landed on page'],[70,'#5DCAA5','61','Scrolled past hero'],[61,'#5DCAA5','53','Scrolled to modules'],[20,'#1D9E75','17','Clicked entry req.'],[9,'#0F6E56','8','Booked open day / enquired']], note:'Solid mid-range performance. Student testimonials and career outcomes content gets low scroll — consider moving higher up the page.' },
+    eng: { name:'Engineering MEng', dept:'Science & Engineering', active:11, today:74, time:'4m 55s', scroll:'69%', conv:'9.1%', convClass:'conv-mid', trend:'→ flat', trendClass:'trend-flat', personas:['International (8)','Undergrad (3)'], funnel:[[100,'#85B7EB','74','Landed on page'],[80,'#85B7EB','59','Scrolled past hero'],[69,'#378ADD','51','Scrolled to modules'],[40,'#185FA5','30','Checked scholarship link'],[9,'#0C447C','7','Submitted enquiry']], note:'Dominated by international visitors. 40% click through to scholarships — ensure the scholarship link is prominent and country-specific.' },
+    med: { name:'Medicine MBBS', dept:'Health Sciences', active:9, today:92, time:'6m 44s', scroll:'88%', conv:'18.5%', convClass:'conv-high', trend:'↑ +2.0%', trendClass:'trend-up', personas:['Undergrad (8)','Parent (1)'], funnel:[[100,'#9FE1CB','92','Landed on page'],[92,'#5DCAA5','85','Scrolled past hero'],[88,'#5DCAA5','81','Scrolled to modules'],[45,'#1D9E75','41','Clicked entry req.'],[19,'#0F6E56','17','Booked open day / enquired']], note:'Best performing page. Extremely high scroll depth — visitors are reading everything. Consider adding a dedicated "ask a medical student" live chat.' },
+    ds: { name:'Data Science MSc', dept:'Science & Engineering', active:8, today:61, time:'5m 10s', scroll:'77%', conv:'7.3%', convClass:'conv-mid', trend:'↑ +3.5%', trendClass:'trend-up', personas:['Postgrad (6)','International (2)'], funnel:[[100,'#AFA9EC','61','Landed on page'],[85,'#AFA9EC','52','Scrolled past hero'],[77,'#7F77DD','47','Scrolled to modules'],[38,'#534AB7','23','Visited funding page'],[7,'#3C3489','4','Submitted enquiry']], note:'Rising fast. Postgrad visitors read deeply but conversion is low — the jump from funding page to enquiry is a weak link. Consider a clearer CTA after the funding section.' },
+    law: { name:'Law LLB', dept:'Humanities', active:7, today:49, time:'2m 10s', scroll:'38%', conv:'4.1%', convClass:'conv-low', trend:'↓ -1.8%', trendClass:'trend-down', personas:['Undergrad (7)'], funnel:[[100,'#FAC775','49','Landed on page'],[55,'#EF9F27','27','Scrolled past hero'],[38,'#BA7517','19','Scrolled to modules'],[12,'#854F0B','6','Clicked entry req.'],[4,'#633806','2','Booked open day / enquired']], note:'⚠️ Under-performing. Low scroll depth and falling conversion. The hero section may not be compelling enough — most visitors leave before reaching course content. Urgent review recommended.' },
+    bus: { name:'Business & Mgmt BSc', dept:'Business School', active:6, today:54, time:'2m 50s', scroll:'45%', conv:'6.8%', convClass:'conv-mid', trend:'→ flat', trendClass:'trend-flat', personas:['International (4)','Undergrad (2)'], funnel:[[100,'#EF9F27','54','Landed on page'],[60,'#EF9F27','32','Scrolled past hero'],[45,'#BA7517','24','Scrolled to modules'],[22,'#854F0B','12','Clicked scholarship link'],[7,'#633806','4','Submitted enquiry']], note:'Flat performance. International visitors dominate but scholarship link click-through is low relative to interest. Country-specific content could lift conversion.' },
+    ai: { name:'AI & Robotics MSc', dept:'Science & Engineering', active:5, today:38, time:'6m 02s', scroll:'82%', conv:'5.2%', convClass:'conv-low', trend:'↑ +6.1%', trendClass:'trend-up', personas:['Postgrad (5)'], funnel:[[100,'#CECBF6','38','Landed on page'],[88,'#AFA9EC','33','Scrolled past hero'],[82,'#7F77DD','31','Scrolled to modules'],[55,'#534AB7','21','Visited faculty profile'],[5,'#3C3489','2','Submitted enquiry']], note:'Fastest growing page. Very high scroll depth and faculty profile visits — but enquiry rate is low. Visitors want to contact supervisors directly. Surface a "Email this supervisor" button on faculty profiles.' },
+    arch: { name:'Architecture BA', dept:'Arts & Design', active:4, today:31, time:'3m 45s', scroll:'52%', conv:'5.8%', convClass:'conv-low', trend:'→ flat', trendClass:'trend-flat', personas:['Undergrad (4)'], funnel:[[100,'#9FE1CB','31','Landed on page'],[65,'#5DCAA5','20','Scrolled past hero'],[52,'#5DCAA5','16','Scrolled to modules'],[18,'#1D9E75','6','Clicked portfolio/entry req.'],[6,'#0F6E56','2','Booked open day']], note:'Flat. Portfolio requirement page sees low engagement — students may be unsure what to prepare. Adding a portfolio guide link near the top could improve depth and conversion.' },
+  };
+
+  function openCourseModal(id) {
+    const c = courses[id]; if(!c) return;
+    document.getElementById('modal-title').textContent = c.name + ' — ' + c.dept;
+    document.getElementById('modal-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;">
+        <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#888780;">Viewing now</div><div style="font-size:20px;font-weight:500;">${c.active}</div></div>
+        <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#888780;">Viewed today</div><div style="font-size:20px;font-weight:500;">${c.today}</div></div>
+        <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#888780;">Avg time on page</div><div style="font-size:20px;font-weight:500;">${c.time}</div></div>
+        <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;"><div style="font-size:10px;color:#888780;">Scrolled to modules</div><div style="font-size:20px;font-weight:500;">${c.scroll}</div></div>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:12px;font-weight:500;margin-bottom:8px;">Conversion funnel</div>
+        ${c.funnel.map(([w,col,n,label])=>`
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+            <span style="font-size:11px;color:#888780;width:160px;flex-shrink:0;">${label}</span>
+            <div style="flex:1;height:18px;background:#f5f4f0;border-radius:3px;overflow:hidden;">
+              <div style="width:${w}%;height:100%;background:${col};display:flex;align-items:center;padding-left:7px;font-size:10px;font-weight:500;border-radius:3px;">${n}</div>
+            </div>
+            <span style="font-size:10px;color:#888780;width:32px;text-align:right;">${w}%</span>
+          </div>`).join('')}
+      </div>
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:12px;font-weight:500;margin-bottom:8px;">Viewing personas</div>
+        <div style="display:flex;gap:8px;">${c.personas.map(p=>`<span class="pill pill-gray">${p}</span>`).join('')}</div>
+      </div>
+      <div style="background:#f5f4f0;border-radius:8px;padding:12px;font-size:12px;color:#5F5E5A;line-height:1.6;">
+        💡 <strong>Insight:</strong> ${c.note}
+      </div>`;
+    document.getElementById('courseModal').classList.add('open');
+  }
+
+  function closeModal(e) { if(e.target.id==='courseModal') document.getElementById('courseModal').classList.remove('open'); }
+
+  function showPage(id, el) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('page-'+id).classList.add('active');
+    if(el && el.classList) el.classList.add('active');
+  }
+
+  function switchSubTab(el, targetId) {
+    document.querySelectorAll('.tab-bar .tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.subtab').forEach(s=>s.style.display='none');
+    el.classList.add('active');
+    document.getElementById(targetId).style.display='block';
+  }
+
+  function showJourney(id) {
+    document.querySelectorAll('[id$="-panel"]').forEach(p=>p.style.display='none');
+    document.getElementById('journey-detail').style.display='block';
+    document.getElementById(id+'-panel').style.display='block';
+    const labels = {j1:'Visitor #A1042 — journey detail',j2:'Visitor #B0231 — journey detail',j3:'Visitor #C0091 — journey detail',j4:'Visitor #A1038 — journey detail',j5:'Visitor #A1027 — journey detail',j6:'Visitor #B0217 — journey detail'};
+    document.getElementById('journey-detail-label').textContent = labels[id];
+    document.getElementById(id+'-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
+  let total = 247;
+  setInterval(()=>{ total += Math.floor(Math.random()*5)-1; if(total<230)total=235; document.getElementById('totalActive').textContent=total; const s=Math.floor(Math.random()*59); document.getElementById('lastUpdated').textContent=s===0?'just now':s+'s ago'; },4000);
+  function tick(){ document.getElementById('clockDisplay').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+  tick(); setInterval(tick,1000);
+</script>
+</body>
+</html>
